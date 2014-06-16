@@ -53,6 +53,7 @@ type (
 	}
 
 	Task struct {
+		ID             int64     `json:"id,omitempty"`
 		Assignee       *User     `json:"assignee,omitempty"`
 		AssigneeStatus string    `json:"assignee_status,omitempty"`
 		Completed      bool      `json:"completed,omitempty"`
@@ -63,6 +64,7 @@ type (
 	}
 
 	Tag struct {
+		ID    int64  `json:"id,omitempty"`
 		Name  string `json:"name,omitempty"`
 		Color string `json:"color,omitempty"`
 		Notes string `json:"notes,omitempty"`

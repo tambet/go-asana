@@ -51,7 +51,7 @@ func TestListWorkspaces(t *testing.T) {
 
 	workspaces, err := client.ListWorkspaces()
 	if err != nil {
-	  t.Errorf("ListWorkspaces returned error: %v", err)
+		t.Errorf("ListWorkspaces returned error: %v", err)
 	}
 
 	want := []Workspace{
