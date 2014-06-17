@@ -38,6 +38,13 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
+func TestNewError(t *testing.T) {
+	err := Error{Phrase: "P", Message: "M"}
+	if err.Error() != "M - P" {
+		t.Errorf("Invalid Error message: %v", err.Error())
+	}
+}
+
 func TestListWorkspaces(t *testing.T) {
 	setup()
 	defer teardown()
