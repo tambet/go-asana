@@ -1,12 +1,14 @@
+// Package asana is a client for Asana API.
 package asana
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/google/go-querystring/query"
 	"net/http"
 	"net/url"
-	"reflect"
+	"time"
+
+	"github.com/google/go-querystring/query"
 )
 
 const (
@@ -15,12 +17,12 @@ const (
 	defaultBaseURL = "https://app.asana.com/api/1.0/"
 )
 
-var defaultOptFields = map[string]string{
-	"tags":       "name,color,notes",
-	"users":      "name,email,photo",
-	"projects":   "name,color,archived",
-	"workspaces": "name,is_organization",
-	"tasks":      "name,assignee,assignee_status,completed,parent",
+var defaultOptFields = map[string][]string{
+	"tags":       {"name", "color", "notes"},
+	"users":      {"name", "email", "photo"},
+	"projects":   {"name", "color", "archived"},
+	"workspaces": {"name", "is_organization"},
+	"tasks":      {"name", "assignee", "assignee_status", "completed", "parent"},
 }
 
 type (
@@ -37,11 +39,11 @@ type (
 	}
 
 	User struct {
-		ID         int64       `json:"id,omitempty"`
-		Email      string      `json:"email,omitempty"`
-		Name       string      `json:"name,omitempty"`
-		Photo      string      `json:"photo,omitempty"`
-		Workspaces []Workspace `json:"workspaces,omitempty"`
+		ID         int64             `json:"id,omitempty"`
+		Email      string            `json:"email,omitempty"`
+		Name       string            `json:"name,omitempty"`
+		Photo      map[string]string `json:"photo,omitempty"`
+		Workspaces []Workspace       `json:"workspaces,omitempty"`
 	}
 
 	Project struct {
@@ -56,11 +58,29 @@ type (
 		ID             int64     `json:"id,omitempty"`
 		Assignee       *User     `json:"assignee,omitempty"`
 		AssigneeStatus string    `json:"assignee_status,omitempty"`
+		CreatedAt      time.Time `json:"created_at,omitempty"`
+		CreatedBy      User      `json:"created_by,omitempty"` // Undocumented field, but it can be included.
 		Completed      bool      `json:"completed,omitempty"`
 		Name           string    `json:"name,omitempty"`
+		Hearts         []Heart   `json:"hearts,omitempty"`
 		Notes          string    `json:"notes,omitempty"`
 		ParentTask     *Task     `json:"parent,omitempty"`
 		Projects       []Project `json:"projects,omitempty"`
+	}
+
+	Story struct {
+		ID        int64     `json:"id,omitempty"`
+		CreatedAt time.Time `json:"created_at,omitempty"`
+		CreatedBy User      `json:"created_by,omitempty"`
+		Hearts    []Heart   `json:"hearts,omitempty"`
+		Text      string    `json:"text,omitempty"`
+		Type      string    `json:"type,omitempty"` // E.g., "comment", "system".
+	}
+
+	// TODO: What should this be called?
+	Heart struct {
+		ID   int64 `json:"id,omitempty"` // TODO: What is this id?
+		User User  `json:"user,omitempty"`
 	}
 
 	Tag struct {
@@ -71,13 +91,14 @@ type (
 	}
 
 	Filter struct {
-		Archived       bool   `url:"archived,omitempty"`
-		Assignee       int64  `url:"assignee,omitempty"`
-		Project        int64  `url:"project,omitempty"`
-		Workspace      int64  `url:"workspace,omitempty"`
-		CompletedSince string `url:"completed_since,omitempty"`
-		ModifiedSince  string `url:"modified_since,omitempty"`
-		OptFields      string `url:"opt_fields,omitempty"`
+		Archived       bool     `url:"archived,omitempty"`
+		Assignee       int64    `url:"assignee,omitempty"`
+		Project        int64    `url:"project,omitempty"`
+		Workspace      int64    `url:"workspace,omitempty"`
+		CompletedSince string   `url:"completed_since,omitempty"`
+		ModifiedSince  string   `url:"modified_since,omitempty"`
+		OptFields      []string `url:"opt_fields,comma,omitempty"`
+		OptExpand      []string `url:"opt_expand,comma,omitempty"`
 	}
 
 	Response struct {
@@ -128,18 +149,48 @@ func (c *Client) ListTasks(opt *Filter) ([]Task, error) {
 	return *tasks, err
 }
 
+func (c *Client) GetTask(id int64, opt *Filter) (Task, error) {
+	task := new(Task)
+	err := c.Request(fmt.Sprintf("tasks/%d", id), opt, task)
+	return *task, err
+}
+
+func (c *Client) ListProjectTasks(projectID int64, opt *Filter) ([]Task, error) {
+	tasks := new([]Task)
+	err := c.Request(fmt.Sprintf("projects/%d/tasks", projectID), opt, tasks)
+	return *tasks, err
+}
+
+func (c *Client) ListTaskStories(taskID int64, opt *Filter) ([]Story, error) {
+	stories := new([]Story)
+	err := c.Request(fmt.Sprintf("tasks/%d/stories", taskID), opt, stories)
+	return *stories, err
+}
+
 func (c *Client) ListTags(opt *Filter) ([]Tag, error) {
 	tags := new([]Tag)
 	err := c.Request("tags", opt, tags)
 	return *tags, err
 }
 
+func (c *Client) GetAuthenticatedUser(opt *Filter) (User, error) {
+	user := new(User)
+	err := c.Request("users/me", opt, user)
+	return *user, err
+}
+
+func (c *Client) GetUserByID(id int64, opt *Filter) (User, error) {
+	user := new(User)
+	err := c.Request(fmt.Sprintf("users/%d", id), opt, user)
+	return *user, err
+}
+
 func (c *Client) Request(path string, opt *Filter, v interface{}) error {
 	if opt == nil {
 		opt = &Filter{}
 	}
-	if opt.OptFields == "" {
-		// default options should not modify provided options
+	if len(opt.OptFields) == 0 {
+		// We should not modify opt provided to Request.
 		newOpt := *opt
 		opt = &newOpt
 		opt.OptFields = defaultOptFields[path]
@@ -174,10 +225,6 @@ func (c *Client) Request(path string, opt *Filter, v interface{}) error {
 }
 
 func addOptions(s string, opt interface{}) (string, error) {
-	v := reflect.ValueOf(opt)
-	if v.Kind() == reflect.Ptr && v.IsNil() {
-		return s, nil
-	}
 	u, err := url.Parse(s)
 	if err != nil {
 		return s, err
