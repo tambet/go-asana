@@ -2,6 +2,7 @@ package asana
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -146,6 +147,42 @@ func TestListTasks(t *testing.T) {
 
 	if !reflect.DeepEqual(tasks, want) {
 		t.Errorf("ListTasks returned %+v, want %+v", tasks, want)
+	}
+}
+
+func TestUpdateTask(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/tasks/1", func(w http.ResponseWriter, r *http.Request) {
+		// TODO: Verify method, headers, etc.
+		// TODO: Verify that this handler is hit exactly once.
+		b, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("error reading request body: %v", err)
+		}
+		want := `{"data":{"notes":"updated notes"}}`
+		if !reflect.DeepEqual(string(b), want) {
+			t.Errorf("handler received request body %+v, want %+v", string(b), want)
+		}
+
+		fmt.Fprint(w, `{"data":{"id":1,"notes":"updated notes"}}`)
+	})
+
+	// TODO: Add this to package API, like go-github, maybe? Think about it first.
+	//
+	// String is a helper routine that allocates a new string value
+	// to store v and returns a pointer to it.
+	String := func(v string) *string { return &v }
+
+	task, err := client.UpdateTask(1, TaskUpdate{Notes: String("updated notes")}, nil)
+	if err != nil {
+		t.Errorf("UpdateTask returned error: %v", err)
+	}
+
+	want := Task{ID: 1, Notes: "updated notes"}
+	if !reflect.DeepEqual(task, want) {
+		t.Errorf("UpdateTask returned %+v, want %+v", task, want)
 	}
 }
 

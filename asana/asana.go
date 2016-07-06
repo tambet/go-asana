@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -170,7 +171,7 @@ func (c *Client) GetTask(id int64, opt *Filter) (Task, error) {
 // https://asana.com/developers/api-reference/tasks#update
 func (c *Client) UpdateTask(id int64, tu TaskUpdate, opt *Filter) (Task, error) {
 	task := new(Task)
-	err := c.putRequest(fmt.Sprintf("tasks/%d", id), tu, opt, task)
+	err := c.request("PUT", fmt.Sprintf("tasks/%d", id), tu, opt, task)
 	return *task, err
 }
 
@@ -205,46 +206,12 @@ func (c *Client) GetUserByID(id int64, opt *Filter) (User, error) {
 }
 
 func (c *Client) Request(path string, opt *Filter, v interface{}) error {
-	if opt == nil {
-		opt = &Filter{}
-	}
-	if len(opt.OptFields) == 0 {
-		// We should not modify opt provided to Request.
-		newOpt := *opt
-		opt = &newOpt
-		opt.OptFields = defaultOptFields[path]
-	}
-	urlStr, err := addOptions(path, opt)
-	if err != nil {
-		return err
-	}
-	rel, err := url.Parse(urlStr)
-	if err != nil {
-		return err
-	}
-	u := c.BaseURL.ResolveReference(rel)
-	req, err := http.NewRequest("GET", u.String(), nil)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Add("User-Agent", c.UserAgent)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	res := &Response{Data: v}
-	err = json.NewDecoder(resp.Body).Decode(res)
-	if len(res.Errors) > 0 {
-		return res.Errors[0]
-	}
-	return err
+	return c.request("GET", path, nil, opt, v)
 }
 
-// TODO: Dedup.
-func (c *Client) putRequest(path string, data interface{}, opt *Filter, v interface{}) error {
+// request makes a request to Asana API, using method, at path, sending data with opt filter.
+// The response is populated into v, and any error is returned.
+func (c *Client) request(method string, path string, data interface{}, opt *Filter, v interface{}) error {
 	if opt == nil {
 		opt = &Filter{}
 	}
@@ -263,11 +230,15 @@ func (c *Client) putRequest(path string, data interface{}, opt *Filter, v interf
 		return err
 	}
 	u := c.BaseURL.ResolveReference(rel)
-	b, err := json.Marshal(request{Data: data})
-	if err != nil {
-		return err
+	var body io.Reader
+	if data != nil {
+		b, err := json.Marshal(request{Data: data})
+		if err != nil {
+			return err
+		}
+		body = bytes.NewReader(b)
 	}
-	req, err := http.NewRequest("PUT", u.String(), bytes.NewReader(b))
+	req, err := http.NewRequest(method, u.String(), body)
 	if err != nil {
 		return err
 	}
