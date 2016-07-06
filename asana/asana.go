@@ -2,6 +2,7 @@
 package asana
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -67,6 +68,11 @@ type (
 		ParentTask     *Task     `json:"parent,omitempty"`
 		Projects       []Project `json:"projects,omitempty"`
 	}
+	// TaskUpdate is used to update a task.
+	TaskUpdate struct {
+		Notes   *string `json:"notes,omitempty"`
+		Hearted *bool   `json:"hearted,omitempty"`
+	}
 
 	Story struct {
 		ID        int64     `json:"id,omitempty"`
@@ -99,6 +105,10 @@ type (
 		ModifiedSince  string   `url:"modified_since,omitempty"`
 		OptFields      []string `url:"opt_fields,comma,omitempty"`
 		OptExpand      []string `url:"opt_expand,comma,omitempty"`
+	}
+
+	request struct {
+		Data interface{} `json:"data,omitempty"`
 	}
 
 	Response struct {
@@ -155,6 +165,15 @@ func (c *Client) GetTask(id int64, opt *Filter) (Task, error) {
 	return *task, err
 }
 
+// UpdateTask updates a task.
+//
+// https://asana.com/developers/api-reference/tasks#update
+func (c *Client) UpdateTask(id int64, tu TaskUpdate, opt *Filter) (Task, error) {
+	task := new(Task)
+	err := c.putRequest(fmt.Sprintf("tasks/%d", id), tu, opt, task)
+	return *task, err
+}
+
 func (c *Client) ListProjectTasks(projectID int64, opt *Filter) ([]Task, error) {
 	tasks := new([]Task)
 	err := c.Request(fmt.Sprintf("projects/%d/tasks", projectID), opt, tasks)
@@ -205,6 +224,50 @@ func (c *Client) Request(path string, opt *Filter, v interface{}) error {
 	}
 	u := c.BaseURL.ResolveReference(rel)
 	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("User-Agent", c.UserAgent)
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	res := &Response{Data: v}
+	err = json.NewDecoder(resp.Body).Decode(res)
+	if len(res.Errors) > 0 {
+		return res.Errors[0]
+	}
+	return err
+}
+
+// TODO: Dedup.
+func (c *Client) putRequest(path string, data interface{}, opt *Filter, v interface{}) error {
+	if opt == nil {
+		opt = &Filter{}
+	}
+	if len(opt.OptFields) == 0 {
+		// We should not modify opt provided to Request.
+		newOpt := *opt
+		opt = &newOpt
+		opt.OptFields = defaultOptFields[path]
+	}
+	urlStr, err := addOptions(path, opt)
+	if err != nil {
+		return err
+	}
+	rel, err := url.Parse(urlStr)
+	if err != nil {
+		return err
+	}
+	u := c.BaseURL.ResolveReference(rel)
+	b, err := json.Marshal(request{Data: data})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("PUT", u.String(), bytes.NewReader(b))
 	if err != nil {
 		return err
 	}
