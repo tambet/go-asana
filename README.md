@@ -2,6 +2,7 @@ go-asana
 ========
 
 [![Build Status](https://travis-ci.org/tambet/go-asana.svg?branch=master)](https://travis-ci.org/tambet/go-asana)
+[![GoDoc](https://godoc.org/github.com/tambet/go-asana/asana?status.svg)](https://godoc.org/github.com/tambet/go-asana/asana)
 [![Coverage Status](https://coveralls.io/repos/tambet/go-asana/badge.png?branch=master)](https://coveralls.io/r/tambet/go-asana?branch=master)
 
 [Go](https://golang.org) library for accessing the [Asana API](https://asana.com/developers/documentation/getting-started/overview).
