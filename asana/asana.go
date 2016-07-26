@@ -84,9 +84,9 @@ type (
 		Type      string    `json:"type,omitempty"` // E.g., "comment", "system".
 	}
 
-	// TODO: What should this be called?
+	// Heart represents a ♥ action by a user.
 	Heart struct {
-		ID   int64 `json:"id,omitempty"` // TODO: What is this id?
+		ID   int64 `json:"id,omitempty"`
 		User User  `json:"user,omitempty"`
 	}
 
