@@ -1,10 +1,12 @@
 go-asana
 ========
 
-[Go](http://golang.org) library for accessing the [Asana API](https://asana.com/developers/documentation/getting-started/overview)
-
 [![Build Status](https://travis-ci.org/tambet/go-asana.svg?branch=master)](https://travis-ci.org/tambet/go-asana)
 [![Coverage Status](https://coveralls.io/repos/tambet/go-asana/badge.png?branch=master)](https://coveralls.io/r/tambet/go-asana?branch=master)
+
+[Go](https://golang.org) library for accessing the [Asana API](https://asana.com/developers/documentation/getting-started/overview).
+
+**Note:** go-asana is currently in development, so its API may have slightly breaking changes if we find better ways of doing things.
 
 ### Usage ###
 
