@@ -154,9 +154,11 @@ func TestUpdateTask(t *testing.T) {
 	setup()
 	defer teardown()
 
+	var called int
+	defer func() { testCalled(t, called, 1) }()
 	mux.HandleFunc("/tasks/1", func(w http.ResponseWriter, r *http.Request) {
-		// TODO: Verify method, headers, etc.
-		// TODO: Verify that this handler is hit exactly once.
+		called++
+		testMethod(t, r, "PUT")
 		b, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			t.Fatalf("error reading request body: %v", err)
@@ -209,5 +211,23 @@ func TestListTags(t *testing.T) {
 
 	if !reflect.DeepEqual(tags, want) {
 		t.Errorf("ListTags returned %+v, want %+v", tags, want)
+	}
+}
+
+func testMethod(t *testing.T, r *http.Request, want string) {
+	if got := r.Method; got != want {
+		t.Errorf("Request method: %v, want %v", got, want)
+	}
+}
+
+func testHeader(t *testing.T, r *http.Request, header string, want string) {
+	if got := r.Header.Get(header); got != want {
+		t.Errorf("Header.Get(%q) returned %q, want %q", header, got, want)
+	}
+}
+
+func testCalled(t *testing.T, called int, want int) {
+	if got := called; got != want {
+		t.Errorf("handler was called %v times, but expected to be called %v times", got, want)
 	}
 }
