@@ -243,7 +243,10 @@ func (c *Client) request(method string, path string, data interface{}, opt *Filt
 		return err
 	}
 
-	req.Header.Add("User-Agent", c.UserAgent)
+	if data != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	req.Header.Set("User-Agent", c.UserAgent)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err

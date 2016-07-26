@@ -159,6 +159,7 @@ func TestUpdateTask(t *testing.T) {
 	mux.HandleFunc("/tasks/1", func(w http.ResponseWriter, r *http.Request) {
 		called++
 		testMethod(t, r, "PUT")
+		testHeader(t, r, "Content-Type", "application/json")
 		b, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			t.Fatalf("error reading request body: %v", err)
