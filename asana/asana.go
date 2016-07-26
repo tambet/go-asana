@@ -2,8 +2,10 @@
 package asana
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -67,6 +69,11 @@ type (
 		ParentTask     *Task     `json:"parent,omitempty"`
 		Projects       []Project `json:"projects,omitempty"`
 	}
+	// TaskUpdate is used to update a task.
+	TaskUpdate struct {
+		Notes   *string `json:"notes,omitempty"`
+		Hearted *bool   `json:"hearted,omitempty"`
+	}
 
 	Story struct {
 		ID        int64     `json:"id,omitempty"`
@@ -99,6 +106,10 @@ type (
 		ModifiedSince  string   `url:"modified_since,omitempty"`
 		OptFields      []string `url:"opt_fields,comma,omitempty"`
 		OptExpand      []string `url:"opt_expand,comma,omitempty"`
+	}
+
+	request struct {
+		Data interface{} `json:"data,omitempty"`
 	}
 
 	Response struct {
@@ -155,6 +166,15 @@ func (c *Client) GetTask(id int64, opt *Filter) (Task, error) {
 	return *task, err
 }
 
+// UpdateTask updates a task.
+//
+// https://asana.com/developers/api-reference/tasks#update
+func (c *Client) UpdateTask(id int64, tu TaskUpdate, opt *Filter) (Task, error) {
+	task := new(Task)
+	err := c.request("PUT", fmt.Sprintf("tasks/%d", id), tu, opt, task)
+	return *task, err
+}
+
 func (c *Client) ListProjectTasks(projectID int64, opt *Filter) ([]Task, error) {
 	tasks := new([]Task)
 	err := c.Request(fmt.Sprintf("projects/%d/tasks", projectID), opt, tasks)
@@ -186,6 +206,12 @@ func (c *Client) GetUserByID(id int64, opt *Filter) (User, error) {
 }
 
 func (c *Client) Request(path string, opt *Filter, v interface{}) error {
+	return c.request("GET", path, nil, opt, v)
+}
+
+// request makes a request to Asana API, using method, at path, sending data with opt filter.
+// The response is populated into v, and any error is returned.
+func (c *Client) request(method string, path string, data interface{}, opt *Filter, v interface{}) error {
 	if opt == nil {
 		opt = &Filter{}
 	}
@@ -204,12 +230,23 @@ func (c *Client) Request(path string, opt *Filter, v interface{}) error {
 		return err
 	}
 	u := c.BaseURL.ResolveReference(rel)
-	req, err := http.NewRequest("GET", u.String(), nil)
+	var body io.Reader
+	if data != nil {
+		b, err := json.Marshal(request{Data: data})
+		if err != nil {
+			return err
+		}
+		body = bytes.NewReader(b)
+	}
+	req, err := http.NewRequest(method, u.String(), body)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Add("User-Agent", c.UserAgent)
+	if data != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	req.Header.Set("User-Agent", c.UserAgent)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err

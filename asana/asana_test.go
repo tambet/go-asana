@@ -2,6 +2,7 @@ package asana
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -149,6 +150,45 @@ func TestListTasks(t *testing.T) {
 	}
 }
 
+func TestUpdateTask(t *testing.T) {
+	setup()
+	defer teardown()
+
+	var called int
+	defer func() { testCalled(t, called, 1) }()
+	mux.HandleFunc("/tasks/1", func(w http.ResponseWriter, r *http.Request) {
+		called++
+		testMethod(t, r, "PUT")
+		testHeader(t, r, "Content-Type", "application/json")
+		b, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("error reading request body: %v", err)
+		}
+		want := `{"data":{"notes":"updated notes"}}`
+		if !reflect.DeepEqual(string(b), want) {
+			t.Errorf("handler received request body %+v, want %+v", string(b), want)
+		}
+
+		fmt.Fprint(w, `{"data":{"id":1,"notes":"updated notes"}}`)
+	})
+
+	// TODO: Add this to package API, like go-github, maybe? Think about it first.
+	//
+	// String is a helper routine that allocates a new string value
+	// to store v and returns a pointer to it.
+	String := func(v string) *string { return &v }
+
+	task, err := client.UpdateTask(1, TaskUpdate{Notes: String("updated notes")}, nil)
+	if err != nil {
+		t.Errorf("UpdateTask returned error: %v", err)
+	}
+
+	want := Task{ID: 1, Notes: "updated notes"}
+	if !reflect.DeepEqual(task, want) {
+		t.Errorf("UpdateTask returned %+v, want %+v", task, want)
+	}
+}
+
 func TestListTags(t *testing.T) {
 	setup()
 	defer teardown()
@@ -172,5 +212,23 @@ func TestListTags(t *testing.T) {
 
 	if !reflect.DeepEqual(tags, want) {
 		t.Errorf("ListTags returned %+v, want %+v", tags, want)
+	}
+}
+
+func testMethod(t *testing.T, r *http.Request, want string) {
+	if got := r.Method; got != want {
+		t.Errorf("Request method: %v, want %v", got, want)
+	}
+}
+
+func testHeader(t *testing.T, r *http.Request, header string, want string) {
+	if got := r.Header.Get(header); got != want {
+		t.Errorf("Header.Get(%q) returned %q, want %q", header, got, want)
+	}
+}
+
+func testCalled(t *testing.T, called int, want int) {
+	if got := called; got != want {
+		t.Errorf("handler was called %v times, but expected to be called %v times", got, want)
 	}
 }
