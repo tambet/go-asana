@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/google/go-querystring/query"
@@ -124,13 +125,15 @@ type (
 
 	Response struct {
 		Data   interface{} `json:"data,omitempty"`
-		Errors []Error     `json:"errors,omitempty"`
+		Errors Errors      `json:"errors,omitempty"`
 	}
 
 	Error struct {
 		Phrase  string `json:"phrase,omitempty"`
 		Message string `json:"message,omitempty"`
 	}
+
+	Errors []Error
 )
 
 func (f DoerFunc) Do(req *http.Request) (resp *http.Response, err error) {
@@ -139,6 +142,14 @@ func (f DoerFunc) Do(req *http.Request) (resp *http.Response, err error) {
 
 func (e Error) Error() string {
 	return fmt.Sprintf("%v - %v", e.Message, e.Phrase)
+}
+
+func (e Errors) Error() string {
+	var sErrs []string
+	for _, err := range e {
+		sErrs = append(sErrs, err.Error())
+	}
+	return strings.Join(sErrs, ", ")
 }
 
 //NewClient created new asana client with doer.
@@ -272,7 +283,7 @@ func (c *Client) request(method string, path string, data interface{}, opt *Filt
 	res := &Response{Data: v}
 	err = json.NewDecoder(resp.Body).Decode(res)
 	if len(res.Errors) > 0 {
-		return res.Errors[0]
+		return res.Errors
 	}
 	return err
 }
