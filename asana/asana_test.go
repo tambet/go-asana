@@ -215,6 +215,20 @@ func TestListTags(t *testing.T) {
 	}
 }
 
+func TestUnauthorized(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/tags", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	})
+
+	_, err := client.ListTags(nil)
+	if err != ErrUnauthorized {
+		t.Errorf("Unexpected err %v", err)
+	}
+}
+
 func testMethod(t *testing.T, r *http.Request, want string) {
 	if got := r.Method; got != want {
 		t.Errorf("Request method: %v, want %v", got, want)

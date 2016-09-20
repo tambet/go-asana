@@ -4,6 +4,7 @@ package asana
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,6 +28,11 @@ var defaultOptFields = map[string][]string{
 	"workspaces": {"name", "is_organization"},
 	"tasks":      {"name", "assignee", "assignee_status", "completed", "parent"},
 }
+
+var (
+	//ErrUnauthorized can be returned on any call on response status code 401
+	ErrUnauthorized = errors.New("asana: unauthorized")
+)
 
 type (
 	//Doer interface used for doing http calls.
@@ -279,6 +285,9 @@ func (c *Client) request(method string, path string, data interface{}, opt *Filt
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized {
+		return ErrUnauthorized
+	}
 
 	res := &Response{Data: v}
 	err = json.NewDecoder(resp.Body).Decode(res)
