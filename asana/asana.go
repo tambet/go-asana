@@ -3,6 +3,7 @@ package asana
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -169,82 +170,82 @@ func NewClient(doer Doer) *Client {
 	return client
 }
 
-func (c *Client) ListWorkspaces() ([]Workspace, error) {
+func (c *Client) ListWorkspaces(ctx context.Context) ([]Workspace, error) {
 	workspaces := new([]Workspace)
-	err := c.Request("workspaces", nil, workspaces)
+	err := c.Request(ctx, "workspaces", nil, workspaces)
 	return *workspaces, err
 }
 
-func (c *Client) ListUsers(opt *Filter) ([]User, error) {
+func (c *Client) ListUsers(ctx context.Context, opt *Filter) ([]User, error) {
 	users := new([]User)
-	err := c.Request("users", opt, users)
+	err := c.Request(ctx, "users", opt, users)
 	return *users, err
 }
 
-func (c *Client) ListProjects(opt *Filter) ([]Project, error) {
+func (c *Client) ListProjects(ctx context.Context, opt *Filter) ([]Project, error) {
 	projects := new([]Project)
-	err := c.Request("projects", opt, projects)
+	err := c.Request(ctx, "projects", opt, projects)
 	return *projects, err
 }
 
-func (c *Client) ListTasks(opt *Filter) ([]Task, error) {
+func (c *Client) ListTasks(ctx context.Context, opt *Filter) ([]Task, error) {
 	tasks := new([]Task)
-	err := c.Request("tasks", opt, tasks)
+	err := c.Request(ctx, "tasks", opt, tasks)
 	return *tasks, err
 }
 
-func (c *Client) GetTask(id int64, opt *Filter) (Task, error) {
+func (c *Client) GetTask(ctx context.Context, id int64, opt *Filter) (Task, error) {
 	task := new(Task)
-	err := c.Request(fmt.Sprintf("tasks/%d", id), opt, task)
+	err := c.Request(ctx, fmt.Sprintf("tasks/%d", id), opt, task)
 	return *task, err
 }
 
 // UpdateTask updates a task.
 //
 // https://asana.com/developers/api-reference/tasks#update
-func (c *Client) UpdateTask(id int64, tu TaskUpdate, opt *Filter) (Task, error) {
+func (c *Client) UpdateTask(ctx context.Context, id int64, tu TaskUpdate, opt *Filter) (Task, error) {
 	task := new(Task)
-	err := c.request("PUT", fmt.Sprintf("tasks/%d", id), tu, opt, task)
+	err := c.request(ctx, "PUT", fmt.Sprintf("tasks/%d", id), tu, opt, task)
 	return *task, err
 }
 
-func (c *Client) ListProjectTasks(projectID int64, opt *Filter) ([]Task, error) {
+func (c *Client) ListProjectTasks(ctx context.Context, projectID int64, opt *Filter) ([]Task, error) {
 	tasks := new([]Task)
-	err := c.Request(fmt.Sprintf("projects/%d/tasks", projectID), opt, tasks)
+	err := c.Request(ctx, fmt.Sprintf("projects/%d/tasks", projectID), opt, tasks)
 	return *tasks, err
 }
 
-func (c *Client) ListTaskStories(taskID int64, opt *Filter) ([]Story, error) {
+func (c *Client) ListTaskStories(ctx context.Context, taskID int64, opt *Filter) ([]Story, error) {
 	stories := new([]Story)
-	err := c.Request(fmt.Sprintf("tasks/%d/stories", taskID), opt, stories)
+	err := c.Request(ctx, fmt.Sprintf("tasks/%d/stories", taskID), opt, stories)
 	return *stories, err
 }
 
-func (c *Client) ListTags(opt *Filter) ([]Tag, error) {
+func (c *Client) ListTags(ctx context.Context, opt *Filter) ([]Tag, error) {
 	tags := new([]Tag)
-	err := c.Request("tags", opt, tags)
+	err := c.Request(ctx, "tags", opt, tags)
 	return *tags, err
 }
 
-func (c *Client) GetAuthenticatedUser(opt *Filter) (User, error) {
+func (c *Client) GetAuthenticatedUser(ctx context.Context, opt *Filter) (User, error) {
 	user := new(User)
-	err := c.Request("users/me", opt, user)
+	err := c.Request(ctx, "users/me", opt, user)
 	return *user, err
 }
 
-func (c *Client) GetUserByID(id int64, opt *Filter) (User, error) {
+func (c *Client) GetUserByID(ctx context.Context, id int64, opt *Filter) (User, error) {
 	user := new(User)
-	err := c.Request(fmt.Sprintf("users/%d", id), opt, user)
+	err := c.Request(ctx, fmt.Sprintf("users/%d", id), opt, user)
 	return *user, err
 }
 
-func (c *Client) Request(path string, opt *Filter, v interface{}) error {
-	return c.request("GET", path, nil, opt, v)
+func (c *Client) Request(ctx context.Context, path string, opt *Filter, v interface{}) error {
+	return c.request(ctx, "GET", path, nil, opt, v)
 }
 
 // request makes a request to Asana API, using method, at path, sending data with opt filter.
 // The response is populated into v, and any error is returned.
-func (c *Client) request(method string, path string, data interface{}, opt *Filter, v interface{}) error {
+func (c *Client) request(ctx context.Context, method string, path string, data interface{}, opt *Filter, v interface{}) error {
 	if opt == nil {
 		opt = &Filter{}
 	}
@@ -280,7 +281,7 @@ func (c *Client) request(method string, path string, data interface{}, opt *Filt
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("User-Agent", c.UserAgent)
-	resp, err := c.doer.Do(req)
+	resp, err := c.doer.Do(req.WithContext(ctx))
 	if err != nil {
 		return err
 	}

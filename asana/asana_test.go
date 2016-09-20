@@ -1,6 +1,7 @@
 package asana
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -14,6 +15,7 @@ var (
 	client *Client
 	mux    *http.ServeMux
 	server *httptest.Server
+	ctx    = context.Background()
 )
 
 func setup() {
@@ -57,7 +59,7 @@ func TestListWorkspaces(t *testing.T) {
 		]}`)
 	})
 
-	workspaces, err := client.ListWorkspaces()
+	workspaces, err := client.ListWorkspaces(ctx)
 	if err != nil {
 		t.Errorf("ListWorkspaces returned error: %v", err)
 	}
@@ -83,7 +85,7 @@ func TestListUsers(t *testing.T) {
 		]}`)
 	})
 
-	users, err := client.ListUsers(nil)
+	users, err := client.ListUsers(ctx, nil)
 	if err != nil {
 		t.Errorf("ListUsers returned error: %v", err)
 	}
@@ -109,7 +111,7 @@ func TestListProjects(t *testing.T) {
 		]}`)
 	})
 
-	projects, err := client.ListProjects(nil)
+	projects, err := client.ListProjects(ctx, nil)
 	if err != nil {
 		t.Errorf("ListProjects returned error: %v", err)
 	}
@@ -135,7 +137,7 @@ func TestListTasks(t *testing.T) {
 		]}`)
 	})
 
-	tasks, err := client.ListTasks(nil)
+	tasks, err := client.ListTasks(ctx, nil)
 	if err != nil {
 		t.Errorf("ListTasks returned error: %v", err)
 	}
@@ -178,7 +180,7 @@ func TestUpdateTask(t *testing.T) {
 	// to store v and returns a pointer to it.
 	String := func(v string) *string { return &v }
 
-	task, err := client.UpdateTask(1, TaskUpdate{Notes: String("updated notes")}, nil)
+	task, err := client.UpdateTask(ctx, 1, TaskUpdate{Notes: String("updated notes")}, nil)
 	if err != nil {
 		t.Errorf("UpdateTask returned error: %v", err)
 	}
@@ -200,7 +202,7 @@ func TestListTags(t *testing.T) {
 		]}`)
 	})
 
-	tags, err := client.ListTags(nil)
+	tags, err := client.ListTags(ctx, nil)
 	if err != nil {
 		t.Errorf("ListTags returned error: %v", err)
 	}
@@ -223,7 +225,7 @@ func TestUnauthorized(t *testing.T) {
 		w.WriteHeader(http.StatusUnauthorized)
 	})
 
-	_, err := client.ListTags(nil)
+	_, err := client.ListTags(ctx, nil)
 	if err != ErrUnauthorized {
 		t.Errorf("Unexpected err %v", err)
 	}
