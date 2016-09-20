@@ -28,8 +28,18 @@ var defaultOptFields = map[string][]string{
 }
 
 type (
+	//Doer interface used for doing http calls.
+	//Use it as point of setting Auth header or custom status code error handling.
+	Doer interface {
+		Do(req *http.Request) (*http.Response, error)
+	}
+
+	//DoerFunc implements Doer interface.
+	//Allow to transform any appropriate function "f" to Doer instance: DoerFunc(f).
+	DoerFunc func(req *http.Request) (resp *http.Response, err error)
+
 	Client struct {
-		client    *http.Client
+		doer      Doer
 		BaseURL   *url.URL
 		UserAgent string
 	}
@@ -123,16 +133,22 @@ type (
 	}
 )
 
+func (f DoerFunc) Do(req *http.Request) (resp *http.Response, err error) {
+	return f(req)
+}
+
 func (e Error) Error() string {
 	return fmt.Sprintf("%v - %v", e.Message, e.Phrase)
 }
 
-func NewClient(httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = http.DefaultClient
+//NewClient created new asana client with doer.
+//If doer is nil then http.DefaultClient used intead.
+func NewClient(doer Doer) *Client {
+	if doer == nil {
+		doer = http.DefaultClient
 	}
 	baseURL, _ := url.Parse(defaultBaseURL)
-	client := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
+	client := &Client{doer: doer, BaseURL: baseURL, UserAgent: userAgent}
 	return client
 }
 
@@ -247,7 +263,7 @@ func (c *Client) request(method string, path string, data interface{}, opt *Filt
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("User-Agent", c.UserAgent)
-	resp, err := c.client.Do(req)
+	resp, err := c.doer.Do(req)
 	if err != nil {
 		return err
 	}
