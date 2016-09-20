@@ -231,6 +231,50 @@ func TestUnauthorized(t *testing.T) {
 	}
 }
 
+func TestCreateTask(t *testing.T) {
+	setup()
+	defer teardown()
+
+	var called int
+	defer func() { testCalled(t, called, 1) }()
+
+	mux.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
+		called++
+		testMethod(t, r, "POST")
+		testHeader(t, r, "Content-Type", "application/x-www-form-urlencoded")
+		b, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("error reading request body: %v", err)
+		}
+		values, err := url.ParseQuery(string(b))
+		if err != nil {
+			t.Fatalf("error parsing body: %v", err)
+		}
+		want := url.Values{
+			"key1": []string{"value1"},
+			"key2": []string{"value2"},
+		}
+		if !reflect.DeepEqual(values, want) {
+			t.Errorf("invalid body received %v", values)
+		}
+		fmt.Fprint(w, `{"data":{"id":1,"notes":"updated notes"}}`)
+	})
+
+	task, err := client.CreateTask(ctx, map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+	}, nil)
+
+	if err != nil {
+		t.Errorf("CreateTask returned error: %v", err)
+	}
+
+	want := Task{ID: 1, Notes: "updated notes"}
+	if !reflect.DeepEqual(task, want) {
+		t.Errorf("CreateTask returned %+v, want %+v", task, want)
+	}
+}
+
 func testMethod(t *testing.T, r *http.Request, want string) {
 	if got := r.Method; got != want {
 		t.Errorf("Request method: %v, want %v", got, want)

@@ -209,6 +209,15 @@ func (c *Client) UpdateTask(ctx context.Context, id int64, tu TaskUpdate, opt *F
 	return *task, err
 }
 
+// CreateTask creates a task.
+//
+// https://asana.com/developers/api-reference/tasks#create
+func (c *Client) CreateTask(ctx context.Context, fields map[string]string, opts *Filter) (Task, error) {
+	task := new(Task)
+	err := c.request(ctx, "POST", "tasks", nil, toURLValues(fields), opts, task)
+	return *task, err
+}
+
 func (c *Client) ListProjectTasks(ctx context.Context, projectID int64, opt *Filter) ([]Task, error) {
 	tasks := new([]Task)
 	err := c.Request(ctx, fmt.Sprintf("projects/%d/tasks", projectID), opt, tasks)
@@ -314,4 +323,12 @@ func addOptions(s string, opt interface{}) (string, error) {
 	}
 	u.RawQuery = qs.Encode()
 	return u.String(), nil
+}
+
+func toURLValues(m map[string]string) url.Values {
+	values := make(url.Values)
+	for k, v := range m {
+		values[k] = []string{v}
+	}
+	return values
 }
