@@ -86,6 +86,8 @@ type (
 		Notes          string    `json:"notes,omitempty"`
 		ParentTask     *Task     `json:"parent,omitempty"`
 		Projects       []Project `json:"projects,omitempty"`
+		DueOn          string    `json:"due_on,omitempty"`
+		DueAt          string    `json:"due_at,omitempty"`
 	}
 	// TaskUpdate is used to update a task.
 	TaskUpdate struct {
