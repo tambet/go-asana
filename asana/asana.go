@@ -205,7 +205,7 @@ func (c *Client) GetTask(ctx context.Context, id int64, opt *Filter) (Task, erro
 // https://asana.com/developers/api-reference/tasks#update
 func (c *Client) UpdateTask(ctx context.Context, id int64, tu TaskUpdate, opt *Filter) (Task, error) {
 	task := new(Task)
-	err := c.request(ctx, "PUT", fmt.Sprintf("tasks/%d", id), tu, opt, task)
+	err := c.request(ctx, "PUT", fmt.Sprintf("tasks/%d", id), tu, nil, opt, task)
 	return *task, err
 }
 
@@ -240,12 +240,12 @@ func (c *Client) GetUserByID(ctx context.Context, id int64, opt *Filter) (User, 
 }
 
 func (c *Client) Request(ctx context.Context, path string, opt *Filter, v interface{}) error {
-	return c.request(ctx, "GET", path, nil, opt, v)
+	return c.request(ctx, "GET", path, nil, nil, opt, v)
 }
 
 // request makes a request to Asana API, using method, at path, sending data with opt filter.
 // The response is populated into v, and any error is returned.
-func (c *Client) request(ctx context.Context, method string, path string, data interface{}, opt *Filter, v interface{}) error {
+func (c *Client) request(ctx context.Context, method string, path string, data interface{}, form url.Values, opt *Filter, v interface{}) error {
 	if opt == nil {
 		opt = &Filter{}
 	}
@@ -271,6 +271,8 @@ func (c *Client) request(ctx context.Context, method string, path string, data i
 			return err
 		}
 		body = bytes.NewReader(b)
+	} else if form != nil {
+		body = strings.NewReader(form.Encode())
 	}
 	req, err := http.NewRequest(method, u.String(), body)
 	if err != nil {
@@ -279,7 +281,10 @@ func (c *Client) request(ctx context.Context, method string, path string, data i
 
 	if data != nil {
 		req.Header.Set("Content-Type", "application/json")
+	} else if form != nil {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
+
 	req.Header.Set("User-Agent", c.UserAgent)
 	resp, err := c.doer.Do(req.WithContext(ctx))
 	if err != nil {
