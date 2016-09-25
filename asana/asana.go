@@ -142,6 +142,7 @@ type (
 		Message string `json:"message,omitempty"`
 	}
 
+	// Errors always has at least 1 element when returned
 	Errors []Error
 )
 
