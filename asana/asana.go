@@ -31,19 +31,19 @@ var defaultOptFields = map[string][]string{
 }
 
 var (
-	//ErrUnauthorized can be returned on any call on response status code 401
+	// ErrUnauthorized can be returned on any call on response status code 401
 	ErrUnauthorized = errors.New("asana: unauthorized")
 )
 
 type (
-	//Doer interface used for doing http calls.
-	//Use it as point of setting Auth header or custom status code error handling.
+	// Doer interface used for doing http calls.
+	// Use it as point of setting Auth header or custom status code error handling.
 	Doer interface {
 		Do(req *http.Request) (*http.Response, error)
 	}
 
-	//DoerFunc implements Doer interface.
-	//Allow to transform any appropriate function "f" to Doer instance: DoerFunc(f).
+	// DoerFunc implements Doer interface.
+	// Allow to transform any appropriate function "f" to Doer instance: DoerFunc(f).
 	DoerFunc func(req *http.Request) (resp *http.Response, err error)
 
 	Client struct {
@@ -161,8 +161,8 @@ func (e Errors) Error() string {
 	return strings.Join(sErrs, ", ")
 }
 
-//NewClient created new asana client with doer.
-//If doer is nil then http.DefaultClient used intead.
+// NewClient created new asana client with doer.
+// If doer is nil then http.DefaultClient used intead.
 func NewClient(doer Doer) *Client {
 	if doer == nil {
 		doer = http.DefaultClient
