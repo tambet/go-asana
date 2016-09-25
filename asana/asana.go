@@ -255,7 +255,9 @@ func (c *Client) Request(ctx context.Context, path string, opt *Filter, v interf
 	return c.request(ctx, "GET", path, nil, nil, opt, v)
 }
 
-// request makes a request to Asana API, using method, at path, sending data with opt filter.
+// request makes a request to Asana API, using method, at path, sending data or form with opt filter.
+// Only data or form could be sent at the same time. If both provided form will be omitted.
+// Also it's possible to do request with nil data and form.
 // The response is populated into v, and any error is returned.
 func (c *Client) request(ctx context.Context, method string, path string, data interface{}, form url.Values, opt *Filter, v interface{}) error {
 	if opt == nil {
