@@ -15,7 +15,6 @@ var (
 	client *Client
 	mux    *http.ServeMux
 	server *httptest.Server
-	ctx    = context.Background()
 )
 
 func setup() {
@@ -59,7 +58,7 @@ func TestListWorkspaces(t *testing.T) {
 		]}`)
 	})
 
-	workspaces, err := client.ListWorkspaces(ctx)
+	workspaces, err := client.ListWorkspaces(context.Background())
 	if err != nil {
 		t.Errorf("ListWorkspaces returned error: %v", err)
 	}
@@ -85,7 +84,7 @@ func TestListUsers(t *testing.T) {
 		]}`)
 	})
 
-	users, err := client.ListUsers(ctx, nil)
+	users, err := client.ListUsers(context.Background(), nil)
 	if err != nil {
 		t.Errorf("ListUsers returned error: %v", err)
 	}
@@ -111,7 +110,7 @@ func TestListProjects(t *testing.T) {
 		]}`)
 	})
 
-	projects, err := client.ListProjects(ctx, nil)
+	projects, err := client.ListProjects(context.Background(), nil)
 	if err != nil {
 		t.Errorf("ListProjects returned error: %v", err)
 	}
@@ -137,7 +136,7 @@ func TestListTasks(t *testing.T) {
 		]}`)
 	})
 
-	tasks, err := client.ListTasks(ctx, nil)
+	tasks, err := client.ListTasks(context.Background(), nil)
 	if err != nil {
 		t.Errorf("ListTasks returned error: %v", err)
 	}
@@ -180,7 +179,7 @@ func TestUpdateTask(t *testing.T) {
 	// to store v and returns a pointer to it.
 	String := func(v string) *string { return &v }
 
-	task, err := client.UpdateTask(ctx, 1, TaskUpdate{Notes: String("updated notes")}, nil)
+	task, err := client.UpdateTask(context.Background(), 1, TaskUpdate{Notes: String("updated notes")}, nil)
 	if err != nil {
 		t.Errorf("UpdateTask returned error: %v", err)
 	}
@@ -202,7 +201,7 @@ func TestListTags(t *testing.T) {
 		]}`)
 	})
 
-	tags, err := client.ListTags(ctx, nil)
+	tags, err := client.ListTags(context.Background(), nil)
 	if err != nil {
 		t.Errorf("ListTags returned error: %v", err)
 	}
@@ -225,7 +224,7 @@ func TestUnauthorized(t *testing.T) {
 		w.WriteHeader(http.StatusUnauthorized)
 	})
 
-	_, err := client.ListTags(ctx, nil)
+	_, err := client.ListTags(context.Background(), nil)
 	if err != ErrUnauthorized {
 		t.Errorf("Unexpected err %v", err)
 	}
@@ -260,7 +259,7 @@ func TestCreateTask(t *testing.T) {
 		fmt.Fprint(w, `{"data":{"id":1,"notes":"updated notes"}}`)
 	})
 
-	task, err := client.CreateTask(ctx, map[string]string{
+	task, err := client.CreateTask(context.Background(), map[string]string{
 		"key1": "value1",
 		"key2": "value2",
 	}, nil)
