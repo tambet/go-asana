@@ -31,7 +31,7 @@ var defaultOptFields = map[string][]string{
 }
 
 var (
-	// ErrUnauthorized can be returned on any call on response status code 401
+	// ErrUnauthorized can be returned on any call on response status code 401.
 	ErrUnauthorized = errors.New("asana: unauthorized")
 )
 
@@ -142,7 +142,7 @@ type (
 		Message string `json:"message,omitempty"`
 	}
 
-	// Errors always has at least 1 element when returned
+	// Errors always has at least 1 element when returned.
 	Errors []Error
 )
 
