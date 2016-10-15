@@ -3,11 +3,14 @@ package asana
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/google/go-querystring/query"
@@ -27,9 +30,24 @@ var defaultOptFields = map[string][]string{
 	"tasks":      {"name", "assignee", "assignee_status", "completed", "parent"},
 }
 
+var (
+	// ErrUnauthorized can be returned on any call on response status code 401.
+	ErrUnauthorized = errors.New("asana: unauthorized")
+)
+
 type (
+	// Doer interface used for doing http calls.
+	// Use it as point of setting Auth header or custom status code error handling.
+	Doer interface {
+		Do(req *http.Request) (*http.Response, error)
+	}
+
+	// DoerFunc implements Doer interface.
+	// Allow to transform any appropriate function "f" to Doer instance: DoerFunc(f).
+	DoerFunc func(req *http.Request) (resp *http.Response, err error)
+
 	Client struct {
-		client    *http.Client
+		doer      Doer
 		BaseURL   *url.URL
 		UserAgent string
 	}
@@ -68,6 +86,8 @@ type (
 		Notes          string    `json:"notes,omitempty"`
 		ParentTask     *Task     `json:"parent,omitempty"`
 		Projects       []Project `json:"projects,omitempty"`
+		DueOn          string    `json:"due_on,omitempty"`
+		DueAt          string    `json:"due_at,omitempty"`
 	}
 	// TaskUpdate is used to update a task.
 	TaskUpdate struct {
@@ -114,104 +134,132 @@ type (
 
 	Response struct {
 		Data   interface{} `json:"data,omitempty"`
-		Errors []Error     `json:"errors,omitempty"`
+		Errors Errors      `json:"errors,omitempty"`
 	}
 
 	Error struct {
 		Phrase  string `json:"phrase,omitempty"`
 		Message string `json:"message,omitempty"`
 	}
+
+	// Errors always has at least 1 element when returned.
+	Errors []Error
 )
+
+func (f DoerFunc) Do(req *http.Request) (resp *http.Response, err error) {
+	return f(req)
+}
 
 func (e Error) Error() string {
 	return fmt.Sprintf("%v - %v", e.Message, e.Phrase)
 }
 
-func NewClient(httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = http.DefaultClient
+func (e Errors) Error() string {
+	var sErrs []string
+	for _, err := range e {
+		sErrs = append(sErrs, err.Error())
+	}
+	return strings.Join(sErrs, ", ")
+}
+
+// NewClient created new asana client with doer.
+// If doer is nil then http.DefaultClient used intead.
+func NewClient(doer Doer) *Client {
+	if doer == nil {
+		doer = http.DefaultClient
 	}
 	baseURL, _ := url.Parse(defaultBaseURL)
-	client := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
+	client := &Client{doer: doer, BaseURL: baseURL, UserAgent: userAgent}
 	return client
 }
 
-func (c *Client) ListWorkspaces() ([]Workspace, error) {
+func (c *Client) ListWorkspaces(ctx context.Context) ([]Workspace, error) {
 	workspaces := new([]Workspace)
-	err := c.Request("workspaces", nil, workspaces)
+	err := c.Request(ctx, "workspaces", nil, workspaces)
 	return *workspaces, err
 }
 
-func (c *Client) ListUsers(opt *Filter) ([]User, error) {
+func (c *Client) ListUsers(ctx context.Context, opt *Filter) ([]User, error) {
 	users := new([]User)
-	err := c.Request("users", opt, users)
+	err := c.Request(ctx, "users", opt, users)
 	return *users, err
 }
 
-func (c *Client) ListProjects(opt *Filter) ([]Project, error) {
+func (c *Client) ListProjects(ctx context.Context, opt *Filter) ([]Project, error) {
 	projects := new([]Project)
-	err := c.Request("projects", opt, projects)
+	err := c.Request(ctx, "projects", opt, projects)
 	return *projects, err
 }
 
-func (c *Client) ListTasks(opt *Filter) ([]Task, error) {
+func (c *Client) ListTasks(ctx context.Context, opt *Filter) ([]Task, error) {
 	tasks := new([]Task)
-	err := c.Request("tasks", opt, tasks)
+	err := c.Request(ctx, "tasks", opt, tasks)
 	return *tasks, err
 }
 
-func (c *Client) GetTask(id int64, opt *Filter) (Task, error) {
+func (c *Client) GetTask(ctx context.Context, id int64, opt *Filter) (Task, error) {
 	task := new(Task)
-	err := c.Request(fmt.Sprintf("tasks/%d", id), opt, task)
+	err := c.Request(ctx, fmt.Sprintf("tasks/%d", id), opt, task)
 	return *task, err
 }
 
 // UpdateTask updates a task.
 //
 // https://asana.com/developers/api-reference/tasks#update
-func (c *Client) UpdateTask(id int64, tu TaskUpdate, opt *Filter) (Task, error) {
+func (c *Client) UpdateTask(ctx context.Context, id int64, tu TaskUpdate, opt *Filter) (Task, error) {
 	task := new(Task)
-	err := c.request("PUT", fmt.Sprintf("tasks/%d", id), tu, opt, task)
+	err := c.request(ctx, "PUT", fmt.Sprintf("tasks/%d", id), tu, nil, opt, task)
 	return *task, err
 }
 
-func (c *Client) ListProjectTasks(projectID int64, opt *Filter) ([]Task, error) {
+// CreateTask creates a task.
+//
+// https://asana.com/developers/api-reference/tasks#create
+func (c *Client) CreateTask(ctx context.Context, fields map[string]string, opts *Filter) (Task, error) {
+	task := new(Task)
+	err := c.request(ctx, "POST", "tasks", nil, toURLValues(fields), opts, task)
+	return *task, err
+}
+
+func (c *Client) ListProjectTasks(ctx context.Context, projectID int64, opt *Filter) ([]Task, error) {
 	tasks := new([]Task)
-	err := c.Request(fmt.Sprintf("projects/%d/tasks", projectID), opt, tasks)
+	err := c.Request(ctx, fmt.Sprintf("projects/%d/tasks", projectID), opt, tasks)
 	return *tasks, err
 }
 
-func (c *Client) ListTaskStories(taskID int64, opt *Filter) ([]Story, error) {
+func (c *Client) ListTaskStories(ctx context.Context, taskID int64, opt *Filter) ([]Story, error) {
 	stories := new([]Story)
-	err := c.Request(fmt.Sprintf("tasks/%d/stories", taskID), opt, stories)
+	err := c.Request(ctx, fmt.Sprintf("tasks/%d/stories", taskID), opt, stories)
 	return *stories, err
 }
 
-func (c *Client) ListTags(opt *Filter) ([]Tag, error) {
+func (c *Client) ListTags(ctx context.Context, opt *Filter) ([]Tag, error) {
 	tags := new([]Tag)
-	err := c.Request("tags", opt, tags)
+	err := c.Request(ctx, "tags", opt, tags)
 	return *tags, err
 }
 
-func (c *Client) GetAuthenticatedUser(opt *Filter) (User, error) {
+func (c *Client) GetAuthenticatedUser(ctx context.Context, opt *Filter) (User, error) {
 	user := new(User)
-	err := c.Request("users/me", opt, user)
+	err := c.Request(ctx, "users/me", opt, user)
 	return *user, err
 }
 
-func (c *Client) GetUserByID(id int64, opt *Filter) (User, error) {
+func (c *Client) GetUserByID(ctx context.Context, id int64, opt *Filter) (User, error) {
 	user := new(User)
-	err := c.Request(fmt.Sprintf("users/%d", id), opt, user)
+	err := c.Request(ctx, fmt.Sprintf("users/%d", id), opt, user)
 	return *user, err
 }
 
-func (c *Client) Request(path string, opt *Filter, v interface{}) error {
-	return c.request("GET", path, nil, opt, v)
+func (c *Client) Request(ctx context.Context, path string, opt *Filter, v interface{}) error {
+	return c.request(ctx, "GET", path, nil, nil, opt, v)
 }
 
-// request makes a request to Asana API, using method, at path, sending data with opt filter.
+// request makes a request to Asana API, using method, at path, sending data or form with opt filter.
+// Only data or form could be sent at the same time. If both provided form will be omitted.
+// Also it's possible to do request with nil data and form.
 // The response is populated into v, and any error is returned.
-func (c *Client) request(method string, path string, data interface{}, opt *Filter, v interface{}) error {
+func (c *Client) request(ctx context.Context, method string, path string, data interface{}, form url.Values, opt *Filter, v interface{}) error {
 	if opt == nil {
 		opt = &Filter{}
 	}
@@ -237,6 +285,8 @@ func (c *Client) request(method string, path string, data interface{}, opt *Filt
 			return err
 		}
 		body = bytes.NewReader(b)
+	} else if form != nil {
+		body = strings.NewReader(form.Encode())
 	}
 	req, err := http.NewRequest(method, u.String(), body)
 	if err != nil {
@@ -245,18 +295,24 @@ func (c *Client) request(method string, path string, data interface{}, opt *Filt
 
 	if data != nil {
 		req.Header.Set("Content-Type", "application/json")
+	} else if form != nil {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
+
 	req.Header.Set("User-Agent", c.UserAgent)
-	resp, err := c.client.Do(req)
+	resp, err := c.doer.Do(req.WithContext(ctx))
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized {
+		return ErrUnauthorized
+	}
 
 	res := &Response{Data: v}
 	err = json.NewDecoder(resp.Body).Decode(res)
 	if len(res.Errors) > 0 {
-		return res.Errors[0]
+		return res.Errors
 	}
 	return err
 }
@@ -272,4 +328,12 @@ func addOptions(s string, opt interface{}) (string, error) {
 	}
 	u.RawQuery = qs.Encode()
 	return u.String(), nil
+}
+
+func toURLValues(m map[string]string) url.Values {
+	values := make(url.Values)
+	for k, v := range m {
+		values[k] = []string{v}
+	}
+	return values
 }

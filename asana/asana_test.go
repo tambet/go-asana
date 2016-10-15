@@ -1,6 +1,7 @@
 package asana
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -57,7 +58,7 @@ func TestListWorkspaces(t *testing.T) {
 		]}`)
 	})
 
-	workspaces, err := client.ListWorkspaces()
+	workspaces, err := client.ListWorkspaces(context.Background())
 	if err != nil {
 		t.Errorf("ListWorkspaces returned error: %v", err)
 	}
@@ -83,7 +84,7 @@ func TestListUsers(t *testing.T) {
 		]}`)
 	})
 
-	users, err := client.ListUsers(nil)
+	users, err := client.ListUsers(context.Background(), nil)
 	if err != nil {
 		t.Errorf("ListUsers returned error: %v", err)
 	}
@@ -109,7 +110,7 @@ func TestListProjects(t *testing.T) {
 		]}`)
 	})
 
-	projects, err := client.ListProjects(nil)
+	projects, err := client.ListProjects(context.Background(), nil)
 	if err != nil {
 		t.Errorf("ListProjects returned error: %v", err)
 	}
@@ -135,7 +136,7 @@ func TestListTasks(t *testing.T) {
 		]}`)
 	})
 
-	tasks, err := client.ListTasks(nil)
+	tasks, err := client.ListTasks(context.Background(), nil)
 	if err != nil {
 		t.Errorf("ListTasks returned error: %v", err)
 	}
@@ -178,7 +179,7 @@ func TestUpdateTask(t *testing.T) {
 	// to store v and returns a pointer to it.
 	String := func(v string) *string { return &v }
 
-	task, err := client.UpdateTask(1, TaskUpdate{Notes: String("updated notes")}, nil)
+	task, err := client.UpdateTask(context.Background(), 1, TaskUpdate{Notes: String("updated notes")}, nil)
 	if err != nil {
 		t.Errorf("UpdateTask returned error: %v", err)
 	}
@@ -200,7 +201,7 @@ func TestListTags(t *testing.T) {
 		]}`)
 	})
 
-	tags, err := client.ListTags(nil)
+	tags, err := client.ListTags(context.Background(), nil)
 	if err != nil {
 		t.Errorf("ListTags returned error: %v", err)
 	}
@@ -212,6 +213,64 @@ func TestListTags(t *testing.T) {
 
 	if !reflect.DeepEqual(tags, want) {
 		t.Errorf("ListTags returned %+v, want %+v", tags, want)
+	}
+}
+
+func TestUnauthorized(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/tags", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	})
+
+	_, err := client.ListTags(context.Background(), nil)
+	if err != ErrUnauthorized {
+		t.Errorf("Unexpected err %v", err)
+	}
+}
+
+func TestCreateTask(t *testing.T) {
+	setup()
+	defer teardown()
+
+	var called int
+	defer func() { testCalled(t, called, 1) }()
+
+	mux.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
+		called++
+		testMethod(t, r, "POST")
+		testHeader(t, r, "Content-Type", "application/x-www-form-urlencoded")
+		b, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("error reading request body: %v", err)
+		}
+		values, err := url.ParseQuery(string(b))
+		if err != nil {
+			t.Fatalf("error parsing body: %v", err)
+		}
+		want := url.Values{
+			"key1": []string{"value1"},
+			"key2": []string{"value2"},
+		}
+		if !reflect.DeepEqual(values, want) {
+			t.Errorf("invalid body received %v", values)
+		}
+		fmt.Fprint(w, `{"data":{"id":1,"notes":"updated notes"}}`)
+	})
+
+	task, err := client.CreateTask(context.Background(), map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+	}, nil)
+
+	if err != nil {
+		t.Errorf("CreateTask returned error: %v", err)
+	}
+
+	want := Task{ID: 1, Notes: "updated notes"}
+	if !reflect.DeepEqual(task, want) {
+		t.Errorf("CreateTask returned %+v, want %+v", task, want)
 	}
 }
 
