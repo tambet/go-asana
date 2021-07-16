@@ -247,7 +247,7 @@ func (c *Client) GetAuthenticatedUser(ctx context.Context, opt *Filter) (User, e
 
 func (c *Client) GetUserByID(ctx context.Context, id string, opt *Filter) (User, error) {
 	user := new(User)
-	err := c.Request(ctx, fmt.Sprintf("users/%d", id), opt, user)
+	err := c.Request(ctx, fmt.Sprintf("users/%s", id), opt, user)
 	return *user, err
 }
 
