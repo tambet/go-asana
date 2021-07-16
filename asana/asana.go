@@ -199,7 +199,7 @@ func (c *Client) ListTasks(ctx context.Context, opt *Filter) ([]Task, error) {
 
 func (c *Client) GetTask(ctx context.Context, id string, opt *Filter) (Task, error) {
 	task := new(Task)
-	err := c.Request(ctx, fmt.Sprintf("tasks/%d", id), opt, task)
+	err := c.Request(ctx, fmt.Sprintf("tasks/%s", id), opt, task)
 	return *task, err
 }
 
@@ -208,7 +208,7 @@ func (c *Client) GetTask(ctx context.Context, id string, opt *Filter) (Task, err
 // https://asana.com/developers/api-reference/tasks#update
 func (c *Client) UpdateTask(ctx context.Context, id string, tu TaskUpdate, opt *Filter) (Task, error) {
 	task := new(Task)
-	err := c.request(ctx, "PUT", fmt.Sprintf("tasks/%d", id), tu, nil, opt, task)
+	err := c.request(ctx, "PUT", fmt.Sprintf("tasks/%s", id), tu, nil, opt, task)
 	return *task, err
 }
 
@@ -223,13 +223,13 @@ func (c *Client) CreateTask(ctx context.Context, fields map[string]string, opts 
 
 func (c *Client) ListProjectTasks(ctx context.Context, projectID string, opt *Filter) ([]Task, error) {
 	tasks := new([]Task)
-	err := c.Request(ctx, fmt.Sprintf("projects/%d/tasks", projectID), opt, tasks)
+	err := c.Request(ctx, fmt.Sprintf("projects/%s/tasks", projectID), opt, tasks)
 	return *tasks, err
 }
 
 func (c *Client) ListTaskStories(ctx context.Context, taskID string, opt *Filter) ([]Story, error) {
 	stories := new([]Story)
-	err := c.Request(ctx, fmt.Sprintf("tasks/%d/stories", taskID), opt, stories)
+	err := c.Request(ctx, fmt.Sprintf("tasks/%s/stories", taskID), opt, stories)
 	return *stories, err
 }
 
