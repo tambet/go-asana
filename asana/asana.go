@@ -119,9 +119,9 @@ type (
 
 	Filter struct {
 		Archived       bool     `url:"archived,omitempty"`
-		Assignee       string    `url:"assignee,omitempty"`
-		Project        string    `url:"project,omitempty"`
-		Workspace      string    `url:"workspace,omitempty"`
+		Assignee       string   `url:"assignee,omitempty"`
+		Project        string   `url:"project,omitempty"`
+		Workspace      string   `url:"workspace,omitempty"`
 		CompletedSince string   `url:"completed_since,omitempty"`
 		ModifiedSince  string   `url:"modified_since,omitempty"`
 		OptFields      []string `url:"opt_fields,comma,omitempty"`
@@ -197,7 +197,7 @@ func (c *Client) ListTasks(ctx context.Context, opt *Filter) ([]Task, error) {
 	return *tasks, err
 }
 
-func (c *Client) GetTask(ctx context.Context, id int64, opt *Filter) (Task, error) {
+func (c *Client) GetTask(ctx context.Context, id string, opt *Filter) (Task, error) {
 	task := new(Task)
 	err := c.Request(ctx, fmt.Sprintf("tasks/%d", id), opt, task)
 	return *task, err
@@ -206,7 +206,7 @@ func (c *Client) GetTask(ctx context.Context, id int64, opt *Filter) (Task, erro
 // UpdateTask updates a task.
 //
 // https://asana.com/developers/api-reference/tasks#update
-func (c *Client) UpdateTask(ctx context.Context, id int64, tu TaskUpdate, opt *Filter) (Task, error) {
+func (c *Client) UpdateTask(ctx context.Context, id string, tu TaskUpdate, opt *Filter) (Task, error) {
 	task := new(Task)
 	err := c.request(ctx, "PUT", fmt.Sprintf("tasks/%d", id), tu, nil, opt, task)
 	return *task, err
@@ -221,13 +221,13 @@ func (c *Client) CreateTask(ctx context.Context, fields map[string]string, opts 
 	return *task, err
 }
 
-func (c *Client) ListProjectTasks(ctx context.Context, projectID int64, opt *Filter) ([]Task, error) {
+func (c *Client) ListProjectTasks(ctx context.Context, projectID string, opt *Filter) ([]Task, error) {
 	tasks := new([]Task)
 	err := c.Request(ctx, fmt.Sprintf("projects/%d/tasks", projectID), opt, tasks)
 	return *tasks, err
 }
 
-func (c *Client) ListTaskStories(ctx context.Context, taskID int64, opt *Filter) ([]Story, error) {
+func (c *Client) ListTaskStories(ctx context.Context, taskID string, opt *Filter) ([]Story, error) {
 	stories := new([]Story)
 	err := c.Request(ctx, fmt.Sprintf("tasks/%d/stories", taskID), opt, stories)
 	return *stories, err
@@ -245,7 +245,7 @@ func (c *Client) GetAuthenticatedUser(ctx context.Context, opt *Filter) (User, e
 	return *user, err
 }
 
-func (c *Client) GetUserByID(ctx context.Context, id int64, opt *Filter) (User, error) {
+func (c *Client) GetUserByID(ctx context.Context, id string, opt *Filter) (User, error) {
 	user := new(User)
 	err := c.Request(ctx, fmt.Sprintf("users/%d", id), opt, user)
 	return *user, err
