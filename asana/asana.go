@@ -119,9 +119,9 @@ type (
 
 	Filter struct {
 		Archived       bool     `url:"archived,omitempty"`
-		Assignee       int64    `url:"assignee,omitempty"`
-		Project        int64    `url:"project,omitempty"`
-		Workspace      int64    `url:"workspace,omitempty"`
+		Assignee       string    `url:"assignee,omitempty"`
+		Project        string    `url:"project,omitempty"`
+		Workspace      string    `url:"workspace,omitempty"`
 		CompletedSince string   `url:"completed_since,omitempty"`
 		ModifiedSince  string   `url:"modified_since,omitempty"`
 		OptFields      []string `url:"opt_fields,comma,omitempty"`
