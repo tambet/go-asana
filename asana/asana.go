@@ -53,13 +53,13 @@ type (
 	}
 
 	Workspace struct {
-		ID           int64  `json:"id,omitempty"`
+		ID           string `json:"gid,omitempty"`
 		Name         string `json:"name,omitempty"`
 		Organization bool   `json:"is_organization,omitempty"`
 	}
 
 	User struct {
-		ID         int64             `json:"id,omitempty"`
+		ID         string            `json:"gid,omitempty"`
 		Email      string            `json:"email,omitempty"`
 		Name       string            `json:"name,omitempty"`
 		Photo      map[string]string `json:"photo,omitempty"`
@@ -67,7 +67,7 @@ type (
 	}
 
 	Project struct {
-		ID       int64  `json:"id,omitempty"`
+		ID       string `json:"gid,omitempty"`
 		Name     string `json:"name,omitempty"`
 		Archived bool   `json:"archived,omitempty"`
 		Color    string `json:"color,omitempty"`
@@ -75,7 +75,7 @@ type (
 	}
 
 	Task struct {
-		ID             int64     `json:"id,omitempty"`
+		ID             string    `json:"gid,omitempty"`
 		Assignee       *User     `json:"assignee,omitempty"`
 		AssigneeStatus string    `json:"assignee_status,omitempty"`
 		CreatedAt      time.Time `json:"created_at,omitempty"`
@@ -96,7 +96,7 @@ type (
 	}
 
 	Story struct {
-		ID        int64     `json:"id,omitempty"`
+		ID        string    `json:"gid,omitempty"`
 		CreatedAt time.Time `json:"created_at,omitempty"`
 		CreatedBy User      `json:"created_by,omitempty"`
 		Hearts    []Heart   `json:"hearts,omitempty"`
@@ -106,12 +106,12 @@ type (
 
 	// Heart represents a ♥ action by a user.
 	Heart struct {
-		ID   int64 `json:"id,omitempty"`
-		User User  `json:"user,omitempty"`
+		ID   string `json:"gid,omitempty"`
+		User User   `json:"user,omitempty"`
 	}
 
 	Tag struct {
-		ID    int64  `json:"id,omitempty"`
+		ID    string `json:"gid,omitempty"`
 		Name  string `json:"name,omitempty"`
 		Color string `json:"color,omitempty"`
 		Notes string `json:"notes,omitempty"`
