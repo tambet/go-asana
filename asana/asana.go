@@ -155,6 +155,10 @@ type (
 	}
 
 	Sections []Section
+
+	AddTaskSection struct {
+		task string `json:"task"`
+	}
 )
 
 func (f DoerFunc) Do(req *http.Request) (resp *http.Response, err error) {
@@ -272,6 +276,17 @@ func (c *Client) ListProjectSections(ctx context.Context, id string, opt *Filter
 	sections := new(Sections)
 	err := c.Request(ctx, fmt.Sprintf("projects/%s/sections", id), opt, sections)
 	return *sections, err
+}
+
+// https://developers.asana.com/docs/add-task-to-section
+func (c *Client) AddTaskSection(
+	ctx context.Context,
+	id string,
+	addTaskSection AddTaskSection,
+	fields map[string]string,
+	opts *Filter,
+) error {
+	return c.request(ctx, "POST", fmt.Sprintf("sections/%s/addTask", id), addTaskSection, toURLValues(fields), opts, nil)
 }
 
 func (c *Client) Request(ctx context.Context, path string, opt *Filter, v interface{}) error {
