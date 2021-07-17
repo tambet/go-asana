@@ -95,6 +95,11 @@ type (
 		Hearted *bool   `json:"hearted,omitempty"`
 	}
 
+	AddProjectTask struct {
+		project string `json:"project,omitempty"`
+		section string `json:"section,omitempty"`
+	}
+
 	Story struct {
 		ID        string    `json:"gid,omitempty"`
 		CreatedAt time.Time `json:"created_at,omitempty"`
@@ -240,6 +245,19 @@ func (c *Client) ListProjectTasks(ctx context.Context, projectID string, opt *Fi
 	tasks := new([]Task)
 	err := c.Request(ctx, fmt.Sprintf("projects/%s/tasks", projectID), opt, tasks)
 	return *tasks, err
+}
+
+// AddProjectTask adds a project to a task
+//
+// https://developers.asana.com/docs/add-a-project-to-a-task
+func (c *Client) AddProjectTask(
+	ctx context.Context,
+	id string,
+	addProjectTask AddProjectTask,
+	fields map[string]string,
+	opts *Filter,
+) error {
+	return c.request(ctx, "POST", fmt.Sprintf("tasks/%s/addProject", id), addProjectTask, toURLValues(fields), opts, nil)
 }
 
 func (c *Client) ListTaskStories(ctx context.Context, taskID string, opt *Filter) ([]Story, error) {
