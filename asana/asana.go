@@ -96,8 +96,8 @@ type (
 	}
 
 	AddProjectTask struct {
-		project string `json:"project,omitempty"`
-		section string `json:"section,omitempty"`
+		Project string `json:"project,omitempty"`
+		Section string `json:"section,omitempty"`
 	}
 
 	Story struct {
@@ -253,7 +253,7 @@ func (c *Client) ListProjectTasks(ctx context.Context, projectID string, opt *Fi
 func (c *Client) AddProjectTask(
 	ctx context.Context,
 	id string,
-	addProjectTask *AddProjectTask,
+	addProjectTask AddProjectTask,
 	fields map[string]string,
 	opts *Filter,
 ) error {
