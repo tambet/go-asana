@@ -91,8 +91,9 @@ type (
 	}
 	// TaskUpdate is used to update a task.
 	TaskUpdate struct {
-		Notes   *string `json:"notes,omitempty"`
-		Hearted *bool   `json:"hearted,omitempty"`
+		Notes     *string `json:"notes,omitempty"`
+		Hearted   *bool   `json:"hearted,omitempty"`
+		Completed *bool   `json:"completed,omitempty"`
 	}
 
 	AddProjectTask struct {
