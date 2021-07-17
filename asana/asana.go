@@ -253,7 +253,7 @@ func (c *Client) ListProjectTasks(ctx context.Context, projectID string, opt *Fi
 func (c *Client) AddProjectTask(
 	ctx context.Context,
 	id string,
-	addProjectTask AddProjectTask,
+	addProjectTask *AddProjectTask,
 	fields map[string]string,
 	opts *Filter,
 ) error {
