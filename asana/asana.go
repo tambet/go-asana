@@ -144,6 +144,17 @@ type (
 
 	// Errors always has at least 1 element when returned.
 	Errors []Error
+
+	Section struct {
+		ID           string    `json:"gid,omitempty"`
+		ResourceType string    `json:"resource_type"`
+		Name         string    `json:"name,omitempty"`
+		CreatedAt    time.Time `json:"created_at,omitempty"`
+		Projects     []Project `json:"projects,omitempty"`
+		Project      Project   `json:"project,omitempty"`
+	}
+
+	Sections []Section
 )
 
 func (f DoerFunc) Do(req *http.Request) (resp *http.Response, err error) {
@@ -249,6 +260,18 @@ func (c *Client) GetUserByID(ctx context.Context, id string, opt *Filter) (User,
 	user := new(User)
 	err := c.Request(ctx, fmt.Sprintf("users/%s", id), opt, user)
 	return *user, err
+}
+
+func (c *Client) GetSection(ctx context.Context, id string, opt *Filter) (Section, error) {
+	section := new(Section)
+	err := c.Request(ctx, fmt.Sprintf("sections/%s", id), opt, section)
+	return *section, err
+}
+
+func (c *Client) ListProjectSections(ctx context.Context, id string, opt *Filter) (Sections, error) {
+	sections := new(Sections)
+	err := c.Request(ctx, fmt.Sprintf("projects/%s/sections", id), opt, sections)
+	return *sections, err
 }
 
 func (c *Client) Request(ctx context.Context, path string, opt *Filter, v interface{}) error {
